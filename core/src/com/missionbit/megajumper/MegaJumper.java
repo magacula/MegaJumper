@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
@@ -11,14 +12,18 @@ import com.badlogic.gdx.math.Vector2;
 import java.util.ArrayList;
 
 public class MegaJumper extends ApplicationAdapter {
-    SpriteBatch batch;
-    OrthographicCamera camera;
-    OrthographicCamera uiCamera;
-    int width, height, score;
-    Vector2 gravity;
-    Player jumper;
-    Platform platform;
-    Platform platform2;
+    private static final int NUM_OF_PLATFORMS = 5;
+
+    private SpriteBatch batch;
+    private OrthographicCamera camera;
+    private OrthographicCamera uiCamera;
+    private int width, height, score;
+    private Vector2 gravity;
+    private ArrayList<Platform> platforms;
+    private Player jumper;
+    Texture background;
+
+
     //ArrayList<Platform> platforms;
     BitmapFont font;
     enum GameState {START, IN_GAME, GAME_OVER}
@@ -30,14 +35,19 @@ public class MegaJumper extends ApplicationAdapter {
     public void create () {
         width = Gdx.graphics.getWidth();
         height = Gdx.graphics.getHeight();
+        camera = new OrthographicCamera();
+        camera.setToOrtho(false, width, height);
+        uiCamera = new OrthographicCamera();
+        uiCamera.setToOrtho(false, width, height);
+        uiCamera.update();
         jumper = new Player();
         batch = new SpriteBatch();
-        platform = new Platform(0, 0);
-        platform2 = new Platform (0,0);
+        platforms = new ArrayList<Platform>();
         gravity = new Vector2();
         font = new BitmapFont(Gdx.files.internal("arial.fnt"),
         Gdx.files.internal("arial.png"), false);
         resetGame();
+        background = new Texture("bg.jpg");
     }
 
     @Override
@@ -56,8 +66,12 @@ public class MegaJumper extends ApplicationAdapter {
 
         jumper.setPosition(width / 2 - jumper.getBounds().getWidth() / 2, height / 2);
         jumper.setVelocity(0, 0);
-        platform.setPosition(width / 2 - platform.getBounds().getWidth() / 2, height / 2 - 500);
-        platform2.setPosition(width / 2 - platform2.getBounds().getWidth() / 2, height / 2 - 250);
+
+        platforms.clear();
+        for (int i = 0; i < NUM_OF_PLATFORMS; i++) {
+            platforms.add(new Platform());
+            platforms.get(i).setPosition((float)Math.random() * width, i * height / NUM_OF_PLATFORMS);
+        }
     }
 
     private void updateGame() {
@@ -67,11 +81,12 @@ public class MegaJumper extends ApplicationAdapter {
         //controls left-right movement, multiplier controls how responsive controls feel
         jumper.setAccel(Gdx.input.getAccelerometerX(), -250);
         jumper.getAccel();
+        camera.position.y = jumper.getPosition().y;
 
         //updates bounds because you need your bounds to follow the visuals
         jumper.setBounds(jumper.getPosition().x, jumper.getPosition().y);
-        platform.setBounds(platform.getPosition().x, platform.getPosition().y);
-        platform2.setBounds(platform2.getPosition().x, platform2.getPosition().y);
+        for (int i = 0; i < NUM_OF_PLATFORMS; i++)
+            platforms.get(i).setBounds(platforms.get(i).getPosition().x, platforms.get(i).getPosition().y);
 
 
         //game states
@@ -88,24 +103,35 @@ public class MegaJumper extends ApplicationAdapter {
             jumper.getVelocity().add(gravity);
 
             //changes direction right when you change tilt threshold, comment out for unresponsive movement
-            if (Gdx.input.getAccelerometerX() > 0 ||Gdx.input.getAccelerometerX() < 0) jumper.getVelocity().x = 0;
+            if (Gdx.input.getAccelerometerX() > 0 || Gdx.input.getAccelerometerX() < 0)
+                jumper.getVelocity().x = 0;
 
             //update jumper velocity and update position
             jumper.getVelocity().x += jumper.getAccel();
             jumper.getPosition().mulAdd(jumper.getVelocity(), deltaTime);
 
+            //platform logic
+            float lowestPlatform = platforms.get(0).getPosition().y;
+            for (int i = 0; i < NUM_OF_PLATFORMS; i++) {
+                //movies platform up after it falls below the camera's "eye"
+                if (platforms.get(i).getPosition().y < camera.position.y - height / 2) {
+                    platforms.get(i).setPosition((float) Math.random() * width, platforms.get(i).getPosition().y + height);
+                }
+                //updates the y position you need to be below to die
+                if (platforms.get(i).getPosition().y < lowestPlatform) {
+                    lowestPlatform = platforms.get(i).getPosition().y;
+                }
+            }
             if (jumper.getPosition().y < 0) {
                 state = GameState.GAME_OVER;
             }
 
             //collision code, kinda bad but it works lol
-            if (jumper.getPosition().y >= (platform.getPosition().y + (platform.getBounds().getHeight() / 2)) && jumper.getBounds().overlaps(platform.getBounds())) {
-                jumper.setVelocity(0, 850);
-                score+=1;
-            }
-            if (jumper.getPosition().y >= (platform2.getPosition().y + (platform2.getBounds().getHeight() / 2)) && jumper.getBounds().overlaps(platform2.getBounds())) {
-                jumper.setVelocity(0, 500);
-                score += 1;
+            for (int i = 0; i < NUM_OF_PLATFORMS; i++) {
+                if (jumper.getPosition().y >= (platforms.get(i).getPosition().y + (platforms.get(i).getBounds().getHeight() / 2)) && jumper.getBounds().overlaps(platforms.get(i).getBounds())) {
+                    jumper.setVelocity(0, 1000);
+                    score += 1;
+                }
             }
         }
 
@@ -117,30 +143,42 @@ public class MegaJumper extends ApplicationAdapter {
     }
 
     private void drawGame() {
+        //game world camera
+        camera.update();
+        batch.setProjectionMatrix(camera.combined);
         batch.begin();
         font.setColor(0, 0, 0, 1);
+        batch.draw(background, camera.position.x - width / 2, camera.position.y - height /2, width, height);
+        if (state == GameState.IN_GAME) {
+            for (int i = 0; i < NUM_OF_PLATFORMS; i++) {
+                platforms.get(i).draw(batch);
+            }
+            jumper.draw(batch);
+        }
+        batch.end();
 
+        //game ui camera
+        batch.setProjectionMatrix(uiCamera.combined);
+        batch.begin();
         //debug messages
+        boolean debug = true;
         if (debug) {
-            font.setScale((float)0.5);
-            font.draw(batch, "Game state: " + state, 20, Gdx.graphics.getHeight() - 20);
-            font.draw(batch, "Accel X: " + (int)jumper.getAccel(), 20, Gdx.graphics.getHeight() - 70);
-            font.draw(batch, "Velocity Y: " + (int)jumper.getVelocity().y, 20, Gdx.graphics.getHeight() - 120);
-            font.draw(batch, "Phone resolution: " + width + ", " + height, 20, Gdx.graphics.getHeight() - 170);
+            font.setScale(1);
+            font.draw(batch, "Game state: " + state, 20, height - 20);
+            font.draw(batch, "Accel X: " + (int)jumper.getAccel(), 20, height - 70);
+            font.draw(batch, "Velocity Y: " + (int)jumper.getVelocity().y, 20, height - 120);
+            font.draw(batch, "Phone resolution: " + width + ", " + height, 20, height - 170);
         }
 
         font.setScale(2);
         if (state == GameState.START) {
-            font.draw(batch, "Tap to start!", Gdx.graphics.getWidth() / 2 - font.getBounds("Tap to start!").width / 2, Gdx.graphics.getHeight() / 2);
+            font.draw(batch, "Tap to start!", width / 2 - font.getBounds("Tap to start!").width / 2, height / 2);
         } else if (state == GameState.IN_GAME) {
-            platform.draw(batch);
-            platform2.draw(batch);
-            jumper.draw(batch);
-            font.draw(batch, "Score: " + score, Gdx.graphics.getWidth() / 2 - font.getBounds("Score: "+ score).width / 2, Gdx.graphics.getHeight() - 250);
+            font.draw(batch, "Score: " + score, width / 2 - font.getBounds("Score: "+ score).width / 2, height - 250);
 
         } else { //state == GameState.GAME_OVER
-            font.draw(batch, "Score: " + score, Gdx.graphics.getWidth() / 2 - font.getBounds("Score: "+ score).width / 2, Gdx.graphics.getHeight() / 2 + font.getBounds("S").height + 10);
-            font.draw(batch, "Tap to restart", Gdx.graphics.getWidth() / 2 - font.getBounds("Tap to restart").width / 2, Gdx.graphics.getHeight() / 2);
+            font.draw(batch, "Score: " + score, width / 2 - font.getBounds("Score: "+ score).width / 2, Gdx.graphics.getHeight() / 2 + font.getBounds("S").height + 10);
+            font.draw(batch, "Tap to restart", width / 2 - font.getBounds("Tap to restart").width / 2, Gdx.graphics.getHeight() / 2);
         }
         batch.end();
     }

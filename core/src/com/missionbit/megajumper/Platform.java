@@ -16,12 +16,13 @@ public class Platform {
     private Vector2 position;
     private Rectangle bounds;
 
-    public Platform (float x, float y) {
+    public Platform () {
         width = Gdx.graphics.getWidth();
         height = Gdx.graphics.getHeight();
-        sprite = new Sprite(new Texture ("missionbit.png"));
+        sprite = new Sprite(new Texture ("supreme.png"));
         position = new Vector2();
         bounds = new Rectangle();
+        sprite.setSize(100,50);
 
     }
 
@@ -29,7 +30,7 @@ public class Platform {
         position.set(x, y);
     }
 
-    public void draw(SpriteBatch batch) {batch.draw(sprite, position.x, position.y);}
+    public void draw(SpriteBatch batch) {batch.draw(sprite, position.x, position.y, 100, 50);}
 
     public Vector2 getPosition() {
         return position;
@@ -40,5 +41,4 @@ public class Platform {
     public Rectangle getBounds() {
         return bounds;
     }
-
 }

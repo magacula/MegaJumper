@@ -22,11 +22,12 @@ public class Player {
     public Player() {
         width = Gdx.graphics.getWidth();
         height = Gdx.graphics.getWidth();
-        img = new Texture("missionbit.png");
+        img = new Texture("bear.png");
         sprite = new Sprite(img);
         velocity = new Vector2();
         position = new Vector2();
         bounds = new Rectangle();
+        sprite.setSize(100,150);
     }
 
     public void setAccel(float x, float multiplier) {accel = Gdx.input.getAccelerometerX() * multiplier;}
@@ -55,5 +56,5 @@ public class Player {
         return velocity;
     }
 
-    public void draw(SpriteBatch batch) {batch.draw(sprite, getPosition().x, getPosition().y);}
+    public void draw(SpriteBatch batch) {batch.draw(sprite, getPosition().x, getPosition().y, sprite.getWidth(), sprite.getHeight()); }
 }
