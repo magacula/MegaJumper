@@ -2,6 +2,7 @@ package com.missionbit.megajumper;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -22,6 +23,7 @@ public class MegaJumper extends ApplicationAdapter {
     private ArrayList<Platform> platforms;
     private Player jumper;
     Texture background;
+    private Music music;
 
 
     //ArrayList<Platform> platforms;
@@ -48,6 +50,9 @@ public class MegaJumper extends ApplicationAdapter {
         Gdx.files.internal("arial.png"), false);
         resetGame();
         background = new Texture("bg.jpg");
+        music = Gdx.audio.newMusic(Gdx.files.internal("goodlife.mp3"));
+        music.play();
+
     }
 
     @Override
@@ -88,14 +93,12 @@ public class MegaJumper extends ApplicationAdapter {
         for (int i = 0; i < NUM_OF_PLATFORMS; i++)
             platforms.get(i).setBounds(platforms.get(i).getPosition().x, platforms.get(i).getPosition().y);
 
-
         //game states
         if (state == GameState.START) {
             if (Gdx.input.justTouched()) {
                 state = GameState.IN_GAME;
-                jumper.setVelocity(0,250);
+                jumper.setVelocity(0, 100);
                 jumper.getPosition().mulAdd(jumper.getVelocity(), deltaTime);
-                //jumper.position.add(jumper.getVelocity().x * deltaTime, jumper.getVelocity().y * deltaTime);
             }
         }
 
@@ -103,26 +106,35 @@ public class MegaJumper extends ApplicationAdapter {
             jumper.getVelocity().add(gravity);
 
             //changes direction right when you change tilt threshold, comment out for unresponsive movement
-            if (Gdx.input.getAccelerometerX() > 0 || Gdx.input.getAccelerometerX() < 0)
-                jumper.getVelocity().x = 0;
+            if (Gdx.input.getAccelerometerX() > 0 ||Gdx.input.getAccelerometerX() < 0) jumper.getVelocity().x = 0;
 
             //update jumper velocity and update position
             jumper.getVelocity().x += jumper.getAccel();
             jumper.getPosition().mulAdd(jumper.getVelocity(), deltaTime);
 
+            //make jumper wrap around screen
+            if (jumper.getPosition().x > width) {
+                jumper.setPosition(0 - jumper.getBounds().getWidth(), jumper.getPosition().y);
+            }
+
+            if (jumper.getPosition().x < 0 - jumper.getBounds().getWidth()) {
+                jumper.setPosition(width, jumper.getPosition().y);
+            }
+
             //platform logic
             float lowestPlatform = platforms.get(0).getPosition().y;
             for (int i = 0; i < NUM_OF_PLATFORMS; i++) {
-                //movies platform up after it falls below the camera's "eye"
+                //moves platform up after it falls below the camera's "eye"
                 if (platforms.get(i).getPosition().y < camera.position.y - height / 2) {
-                    platforms.get(i).setPosition((float) Math.random() * width, platforms.get(i).getPosition().y + height);
+                    platforms.get(i).setPosition((float)Math.random() * width, platforms.get(i).getPosition().y + height);
                 }
                 //updates the y position you need to be below to die
                 if (platforms.get(i).getPosition().y < lowestPlatform) {
                     lowestPlatform = platforms.get(i).getPosition().y;
                 }
             }
-            if (jumper.getPosition().y < 0) {
+
+            if (jumper.getPosition().y < lowestPlatform - 100) {
                 state = GameState.GAME_OVER;
             }
 
@@ -130,7 +142,8 @@ public class MegaJumper extends ApplicationAdapter {
             for (int i = 0; i < NUM_OF_PLATFORMS; i++) {
                 if (jumper.getPosition().y >= (platforms.get(i).getPosition().y + (platforms.get(i).getBounds().getHeight() / 2)) && jumper.getBounds().overlaps(platforms.get(i).getBounds())) {
                     jumper.setVelocity(0, 1000);
-                    score += 1;
+                    score+=1;
+                    //bounce.play();
                 }
             }
         }
@@ -170,7 +183,7 @@ public class MegaJumper extends ApplicationAdapter {
             font.draw(batch, "Phone resolution: " + width + ", " + height, 20, height - 170);
         }
 
-        font.setScale(2);
+        font.setScale(1);
         if (state == GameState.START) {
             font.draw(batch, "Tap to start!", width / 2 - font.getBounds("Tap to start!").width / 2, height / 2);
         } else if (state == GameState.IN_GAME) {

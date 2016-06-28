@@ -17,28 +17,22 @@ public class Platform {
     private Rectangle bounds;
 
     public Platform () {
-        width = Gdx.graphics.getWidth();
-        height = Gdx.graphics.getHeight();
-        sprite = new Sprite(new Texture ("supreme.png"));
+        sprite = new Sprite(new Texture("supreme.png"));
+        sprite.setSize(125,70);
+        sprite.setScale(sprite.getWidth(), sprite.getHeight());
         position = new Vector2();
         bounds = new Rectangle();
-        sprite.setSize(100,50);
+
 
     }
+    public void setPosition(float x, float y) {position.set(x, y);}
 
-    public void setPosition(float x, float y)  {
-        position.set(x, y);
-    }
-
-    public void draw(SpriteBatch batch) {batch.draw(sprite, position.x, position.y, 100, 50);}
-
-    public Vector2 getPosition() {
-        return position;
-    }
+    public Vector2 getPosition() {return position;}
 
     public void setBounds(float x, float y) {bounds.set(x, y, sprite.getWidth(), sprite.getHeight());}
 
-    public Rectangle getBounds() {
-        return bounds;
+    public Rectangle getBounds() {return bounds;}
+
+    public void draw(SpriteBatch batch) {batch.draw(sprite, position.x, position.y, sprite.getWidth(), sprite.getHeight());}
     }
-}
+
